@@ -356,12 +356,26 @@ export async function createMoMoPaymentForOrder(req, res) {
       return res.status(400).json({ message: "Đơn hàng này đã được thanh toán thành công." });
     }
 
+    // Tự động nhận URL trả về cho cả Local (localhost:3000) và Production (Vercel / Render)
+    const requestOrigin = req.headers.origin;
+    const dynamicRedirectUrl =
+      process.env.MOMO_REDIRECT_URL ||
+      (requestOrigin
+        ? `${requestOrigin.replace(/\/+$/, "")}/landlord/dashboard`
+        : "http://localhost:3000/landlord/dashboard");
+
+    const forwardedProto = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const dynamicIpnUrl =
+      process.env.MOMO_IPN_URL ||
+      `${forwardedProto}://${req.get("host")}/api/promotions/momo-ipn`;
+
     // Gọi MoMo API tạo giao dịch (mặc định payWithATM cho phép nhập thẻ test Agribank)
     const momoResult = await createMoMoPayment({
       orderId: order.orderCode,
       amount: Number(order.amount),
       orderInfo: `Thanh toan don hang ${order.orderCode} - ${order.plan.name}`,
-      redirectUrl: process.env.MOMO_REDIRECT_URL || "http://localhost:3000/landlord/dashboard",
+      redirectUrl: dynamicRedirectUrl,
+      ipnUrl: dynamicIpnUrl,
       requestType,
     });
 
