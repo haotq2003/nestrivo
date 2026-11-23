@@ -1,0 +1,33 @@
+# Dependencies & build outputs
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+
+# Environment secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Generated Prisma client
+nestrivo-backend/generated/prisma/
+
+# OS & Debug logs
+.DS_Store
+Thumbs.db
+*.log
+*.tsbuildinfo
+
+# AI tools & local caches
+.agent/
+.agents/
+.cursor/
+.devin/
+.gemini/
+.impeccable/
+.claude/
+.windsurf/
+skills-lock.json

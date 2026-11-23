@@ -1,0 +1,785 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  RENTER
+  LANDLORD
+  ADMIN
+}
+
+enum PropertyType {
+  ROOM_SHARE
+  STUDIO
+  SERVICE_APARTMENT
+  WHOLE_HOUSE
+}
+
+enum ListingStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  REJECTED
+  HIDDEN
+  EXPIRED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  RENTED
+  UNAVAILABLE
+}
+
+enum InquiryStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CONTACTED
+  CLOSED
+}
+
+enum ReportReason {
+  FAKE_LISTING
+  FAKE_IMAGES
+  WRONG_PRICE
+  INCORRECT_AMENITIES
+  WRONG_ADDRESS
+  ALREADY_RENTED
+  MISLEADING_INFO
+  SCAM
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+enum VerificationStatus {
+  NOT_SUBMITTED
+  PENDING
+  VERIFIED
+  REJECTED
+  RESUBMISSION_REQUIRED
+}
+
+enum KycDocumentType {
+  CITIZEN_ID_FRONT
+  CITIZEN_ID_BACK
+  HOUSE_OWNERSHIP
+  RENTAL_AUTHORIZATION
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  WAITING_FOR_RESPONSE
+  RESOLVED
+  REJECTED
+  CLOSED
+}
+
+enum DisputeCategory {
+  FAKE_LISTING_INFO
+  DEPOSIT_DISPUTE
+  RENTAL_CONTRACT_BREACH
+  LANDLORD_IMPERSONATION
+  RENTER_MISCONDUCT
+  OTHER
+}
+
+enum RentalStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN
+  FLAGGED
+}
+
+enum ReviewReportReason {
+  OFFENSIVE_LANGUAGE
+  FALSE_INFORMATION
+  BLACKMAIL_OR_EXTORTION
+  SPAM
+  OTHER
+}
+
+enum ReviewReportStatus {
+  PENDING
+  RESOLVED_HIDDEN
+  DISMISSED
+}
+
+enum PromotionTier {
+  FREE
+  HOT
+  VIP
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  MOMO
+  VNPAY
+  WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PromotionStatus {
+  SCHEDULED
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum FeeType {
+  ELECTRICITY
+  WATER
+  INTERNET
+  SERVICE
+  PARKING
+  OTHER
+}
+
+enum FeeUnit {
+  PER_KWH
+  PER_M3
+  PER_MONTH
+  PER_PERSON
+  PER_VEHICLE
+  FIXED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  phoneNumber  String?
+  avatarUrl    String?
+  roles        Role[]   @default([RENTER])
+  isActive     Boolean  @default(true)
+  lockReason   String?  @db.Text
+  lockedAt     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  landlordProfile       LandlordProfile?
+  listings              Listing[]              @relation("LandlordListings")
+  favorites             Favorite[]
+  sentInquiries         Inquiry[]              @relation("RenterInquiries")
+  receivedInquiries     Inquiry[]              @relation("LandlordInquiries")
+  reports               Report[]
+  auditLogs             AuditLog[]             @relation("AdminAuditLogs")
+
+  // Module 1: Identity Verification Relations
+  verificationRequests  VerificationRequest[]  @relation("LandlordVerificationRequests")
+  reviewedVerifications VerificationRequest[]  @relation("AdminReviewedVerifications")
+  verificationHistories VerificationHistory[]  @relation("AdminVerificationHistories")
+
+  // Module 3: Dispute & Support Relations
+  disputesCreated       Dispute[]              @relation("DisputesCreated")
+  disputesReceived      Dispute[]              @relation("DisputesReceived")
+  disputesAssigned      Dispute[]              @relation("AdminAssignedDisputes")
+  disputeEvidences      DisputeEvidence[]      @relation("UserDisputeEvidences")
+  disputeMessages       DisputeMessage[]       @relation("UserDisputeMessages")
+
+  // Module 2: Reputation & Reviews Relations
+  reviewsGiven          LandlordReview[]       @relation("ReviewsGiven")
+  reviewsReceived       LandlordReview[]       @relation("ReviewsReceived")
+  reviewReportsCreated  ReviewReport[]         @relation("ReviewReportsCreated")
+  rentalsAsRenter       RentalConfirmation[]   @relation("RenterConfirmations")
+  rentalsAsLandlord     RentalConfirmation[]   @relation("LandlordConfirmations")
+  notifications         Notification[]
+
+  // Module 4: Promotion & Monetization Relations
+  promotionOrders       PromotionOrder[]       @relation("LandlordPromotionOrders")
+
+  // Blog Posts Relation
+  blogPosts             BlogPost[]
+
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model LandlordProfile {
+  id                 String             @id @default(uuid()) @db.Uuid
+  userId             String             @unique @db.Uuid
+  displayName        String?
+  description        String?
+  verificationStatus VerificationStatus @default(NOT_SUBMITTED)
+
+  // Module 2: Reputation & Rating Aggregates
+  averageRating      Decimal?           @default(0) @db.Decimal(3, 2)
+  reviewCount        Int                @default(0)
+  responseRate       Int?               @default(95) // Tỷ lệ phản hồi %
+
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Listing {
+  id                 String             @id @default(uuid()) @db.Uuid
+  landlordId         String             @db.Uuid
+  title              String
+  description        String             @db.Text
+  propertyType       PropertyType
+  status             ListingStatus      @default(DRAFT)
+  availabilityStatus AvailabilityStatus @default(AVAILABLE)
+
+  price        Decimal @db.Decimal(12, 2)
+  deposit      Decimal @default(0) @db.Decimal(12, 2)
+  area         Decimal @db.Decimal(8, 2)
+  bedrooms     Int     @default(1)
+  bathrooms    Int     @default(1)
+  maxOccupants Int     @default(2)
+
+  address       String
+  ward          String?
+  district      String
+  city          String
+  latitude      Float?
+  longitude     Float?
+
+  minimumStayMonths Int?
+  allowsPets        Boolean @default(false)
+  hasMezzanine      Boolean @default(false)
+  isFurnished       Boolean @default(false)
+
+  // Module 4: Monetization & Search Ranking
+  currentTier     PromotionTier      @default(FREE)
+  priority        Int                @default(0) // FREE = 0, HOT = 1, VIP = 2
+  views           Int                @default(0)
+
+  rejectionReason String?   @db.Text
+  publishedAt     DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  landlord  User             @relation("LandlordListings", fields: [landlordId], references: [id], onDelete: Restrict)
+  images    ListingImage[]
+  amenities ListingAmenity[]
+  fees      ListingFee[]
+  favorites Favorite[]
+  inquiries Inquiry[]
+  reports   Report[]
+  disputes  Dispute[]
+
+  // Module 2 Relations
+  reviews   LandlordReview[]
+  rentals   RentalConfirmation[]
+
+  // Module 4 Relations
+  promotions      ListingPromotion[]
+  promotionOrders PromotionOrder[]
+
+  @@index([status, availabilityStatus])
+  @@index([city, district])
+  @@index([propertyType])
+  @@index([price])
+  @@index([priority, createdAt])
+  @@index([landlordId])
+  @@index([createdAt])
+}
+
+model ListingImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @db.Uuid
+  imageUrl  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, sortOrder])
+}
+
+model Amenity {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+  icon String?
+
+  listings ListingAmenity[]
+}
+
+model ListingAmenity {
+  listingId String @db.Uuid
+  amenityId String @db.Uuid
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  amenity Amenity @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([listingId, amenityId])
+  @@index([amenityId])
+}
+
+model ListingFee {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @db.Uuid
+  type      FeeType
+  name      String?
+  amount    Decimal  @db.Decimal(12, 2)
+  unit      FeeUnit  @default(FIXED)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+}
+
+model Favorite {
+  userId    String   @db.Uuid
+  listingId String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+  @@index([listingId])
+}
+
+model Inquiry {
+  id             String        @id @default(uuid()) @db.Uuid
+  renterId       String        @db.Uuid
+  landlordId     String        @db.Uuid
+  listingId      String        @db.Uuid
+  message        String        @db.Text
+  status         InquiryStatus @default(PENDING)
+  moveInDate     DateTime?
+  occupantsCount  Int?          @default(1)
+  notes           String?       @db.Text
+  rejectionReason String?       @db.Text
+  contactedAt     DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  renter   User    @relation("RenterInquiries", fields: [renterId], references: [id], onDelete: Restrict)
+  landlord User    @relation("LandlordInquiries", fields: [landlordId], references: [id], onDelete: Restrict)
+  listing  Listing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  reviews  LandlordReview[]
+
+  @@index([renterId, createdAt])
+  @@index([landlordId, status])
+  @@index([listingId])
+}
+
+model Report {
+  id               String       @id @default(uuid()) @db.Uuid
+  reporterId       String       @db.Uuid
+  listingId        String       @db.Uuid
+  reason           ReportReason
+  description      String?      @db.Text
+  evidenceUrls     String[]     @default([])
+  status           ReportStatus @default(PENDING)
+  adminNote        String?      @db.Text
+  resolutionAction String?
+  resolvedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  reporter User    @relation(fields: [reporterId], references: [id], onDelete: Restrict)
+  listing  Listing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+  @@index([listingId])
+  @@index([reporterId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  adminId    String   @db.Uuid
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  admin User @relation("AdminAuditLogs", fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([adminId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// ==========================================
+// MODULE 1: IDENTITY VERIFICATION (eKYC)
+// ==========================================
+
+model VerificationRequest {
+  id               String             @id @default(uuid()) @db.Uuid
+  landlordId       String             @db.Uuid
+
+  // Thông tin đối chiếu từ thẻ CCCD
+  fullName         String
+  idNumber         String             // 12 chữ số CCCD (chỉ Admin và chính chủ mới được thấy)
+  dateOfBirth      String?
+  gender           String?
+  permanentAddress String?
+  issuingAuthority String?
+  issueDate        String?
+
+  status           VerificationStatus @default(PENDING)
+  rejectionReason  String?            @db.Text
+  rejectedFields   Json?              // Mảng các trường cần chụp lại, ví dụ: ["documents.backImage"]
+
+  adminId          String?            @db.Uuid
+  submittedAt      DateTime           @default(now())
+  reviewedAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  landlord         User                   @relation("LandlordVerificationRequests", fields: [landlordId], references: [id], onDelete: Cascade)
+  admin            User?                  @relation("AdminReviewedVerifications", fields: [adminId], references: [id], onDelete: SetNull)
+  documents        VerificationDocument[]
+  histories        VerificationHistory[]
+
+  @@index([landlordId, status])
+  @@index([status, submittedAt])
+}
+
+model VerificationDocument {
+  id        String          @id @default(uuid()) @db.Uuid
+  requestId String          @db.Uuid
+  type      KycDocumentType
+  fileUrl   String          // Đường dẫn ảnh trên Cloudinary/Storage riêng tư
+  fileName  String?
+  fileSize  Int?
+  mimeType  String?
+  createdAt DateTime        @default(now())
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, type])
+}
+
+model VerificationHistory {
+  id        String             @id @default(uuid()) @db.Uuid
+  requestId String             @db.Uuid
+  adminId   String?            @db.Uuid
+  oldStatus VerificationStatus
+  newStatus VerificationStatus
+  note      String?            @db.Text
+  createdAt DateTime           @default(now())
+
+  request VerificationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  admin   User?               @relation("AdminVerificationHistories", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, createdAt])
+}
+
+// ==========================================
+// MODULE 3: DISPUTE & SUPPORT (TRANH CHẤP & KHIẾU NẠI)
+// ==========================================
+
+model Dispute {
+  id             String          @id @default(uuid()) @db.Uuid
+  creatorId      String          @db.Uuid // Người mở khiếu nại (Renter hoặc Landlord)
+  respondentId   String          @db.Uuid // Người bị khiếu nại
+  listingId      String?         @db.Uuid // Tin đăng liên quan (nếu có)
+
+  category       DisputeCategory
+  title          String
+  description    String          @db.Text
+  status         DisputeStatus   @default(OPEN)
+  resolutionNote String?         @db.Text
+
+  adminId        String?         @db.Uuid // Admin thụ lý xử lý
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  creator    User              @relation("DisputesCreated", fields: [creatorId], references: [id], onDelete: Restrict)
+  respondent User              @relation("DisputesReceived", fields: [respondentId], references: [id], onDelete: Restrict)
+  listing    Listing?          @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  admin      User?             @relation("AdminAssignedDisputes", fields: [adminId], references: [id], onDelete: SetNull)
+
+  evidences DisputeEvidence[]
+  messages  DisputeMessage[]
+
+  @@index([status, createdAt])
+  @@index([creatorId])
+  @@index([respondentId])
+  @@index([listingId])
+}
+
+model DisputeEvidence {
+  id         String   @id @default(uuid()) @db.Uuid
+  disputeId  String   @db.Uuid
+  uploaderId String   @db.Uuid
+  fileUrl    String
+  caption    String?
+  createdAt  DateTime @default(now())
+
+  dispute  Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  uploader User    @relation("UserDisputeEvidences", fields: [uploaderId], references: [id], onDelete: Restrict)
+
+  @@index([disputeId])
+}
+
+model DisputeMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  disputeId   String   @db.Uuid
+  senderId    String   @db.Uuid
+  message     String   @db.Text
+  isAdminNote Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  dispute Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  sender  User    @relation("UserDisputeMessages", fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([disputeId, createdAt])
+}
+
+// ==========================================
+// MODULE 2: LANDLORD REPUTATION & REVIEWS (UY TÍN & ĐÁNH GIÁ)
+// ==========================================
+
+model RentalConfirmation {
+  id          String       @id @default(uuid()) @db.Uuid
+  renterId    String       @db.Uuid
+  landlordId  String       @db.Uuid
+  listingId   String       @db.Uuid
+  status      RentalStatus @default(PENDING)
+  moveInDate  DateTime?
+  monthlyRent Decimal?     @db.Decimal(12, 2)
+  deposit     Decimal?     @db.Decimal(12, 2)
+  confirmedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  renter   User            @relation("RenterConfirmations", fields: [renterId], references: [id], onDelete: Restrict)
+  landlord User            @relation("LandlordConfirmations", fields: [landlordId], references: [id], onDelete: Restrict)
+  listing  Listing         @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  review   LandlordReview?
+
+  @@index([renterId, status])
+  @@index([landlordId, status])
+  @@index([listingId])
+}
+
+model LandlordReview {
+  id                   String              @id @default(uuid()) @db.Uuid
+  renterId             String              @db.Uuid
+  landlordId           String              @db.Uuid
+  listingId            String              @db.Uuid
+  rentalConfirmationId String?             @unique @db.Uuid
+  inquiryId            String?             @db.Uuid
+
+  rating               Int                 // 1 - 5 sao tổng thể
+  accuracyRating       Int?                // 1 - 5 sao độ chính xác tin đăng
+  communicationRating  Int?                // 1 - 5 sao giao tiếp & thái độ
+  supportRating        Int?                // 1 - 5 sao hỗ trợ & giải quyết sự cố
+  priceAccurate        Boolean?            @default(true) // Giá thuê có đúng cam kết không
+  amenitiesAccurate    Boolean?            @default(true) // Tiện ích có đúng quảng cáo không
+
+  content              String              @db.Text
+  isVerifiedStay       Boolean             @default(true) // Người thuê phòng thực tế
+  isVerifiedViewing    Boolean             @default(false) // Người đã đi xem phòng thực tế
+  evidenceUrls         String[]            @default([])
+  status               ReviewStatus        @default(PUBLISHED)
+
+  landlordReply        String?             @db.Text // Chủ nhà phản hồi lại review
+  repliedAt            DateTime?
+
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  renter             User                @relation("ReviewsGiven", fields: [renterId], references: [id], onDelete: Restrict)
+  landlord           User                @relation("ReviewsReceived", fields: [landlordId], references: [id], onDelete: Restrict)
+  listing            Listing             @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  rentalConfirmation RentalConfirmation? @relation(fields: [rentalConfirmationId], references: [id], onDelete: SetNull)
+  inquiry            Inquiry?            @relation(fields: [inquiryId], references: [id], onDelete: SetNull)
+  reports            ReviewReport[]
+
+  @@index([landlordId, status])
+  @@index([listingId, status])
+  @@index([renterId])
+}
+
+model ReviewReport {
+  id          String             @id @default(uuid()) @db.Uuid
+  reviewId    String             @db.Uuid
+  reporterId  String             @db.Uuid // Người báo cáo (thường là chủ nhà)
+  reason      ReviewReportReason
+  description String?            @db.Text
+  status      ReviewReportStatus @default(PENDING)
+  adminNote   String?            @db.Text
+  resolvedAt  DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  review   LandlordReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporter User           @relation("ReviewReportsCreated", fields: [reporterId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+  @@index([reviewId])
+  @@index([reporterId])
+}
+
+// ==========================================
+// MODULE 4: LISTING PROMOTION & MONETIZATION (GÓI QUẢNG BÁ TIN ĐĂNG)
+// ==========================================
+
+model PromotionPlan {
+  id           String        @id @default(uuid()) @db.Uuid
+  tier         PromotionTier // HOT hoặc VIP
+  code         String        @unique // Ví dụ: HOT_7D, HOT_30D, VIP_7D, VIP_30D
+  name         String        // "Gói Tin HOT 7 Ngày", "Gói VIP Kim Cương 30 Ngày"
+  description  String?       @db.Text
+  durationDays Int           // 7, 15, 30 ngày
+  price        Decimal       @db.Decimal(12, 2)
+  priority     Int           @default(1) // FREE = 0, HOT = 1, VIP = 2
+  badgeColor   String?       // Mã màu huy hiệu: ví dụ #F4CD65 hoặc #EA580C
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  orders PromotionOrder[]
+
+  @@index([tier, isActive])
+  @@index([priority])
+}
+
+model PromotionOrder {
+  id         String      @id @default(uuid()) @db.Uuid
+  orderCode  String      @unique // Mã đơn hàng (e.g. PROMO-1730829182)
+  landlordId String      @db.Uuid
+  listingId  String      @db.Uuid
+  planId     String      @db.Uuid
+  amount     Decimal     @db.Decimal(12, 2)
+  status     OrderStatus @default(PENDING_PAYMENT)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  landlord         User              @relation("LandlordPromotionOrders", fields: [landlordId], references: [id], onDelete: Restrict)
+  listing          Listing           @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  plan             PromotionPlan     @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payment          PromotionPayment?
+  listingPromotion ListingPromotion?
+
+  @@index([landlordId, status])
+  @@index([listingId])
+  @@index([status, createdAt])
+}
+
+model PromotionPayment {
+  id              String        @id @default(uuid()) @db.Uuid
+  orderId         String        @unique @db.Uuid
+  paymentMethod   PaymentMethod @default(BANK_TRANSFER)
+  transactionCode String?       // Mã giao dịch ngân hàng / MoMo / VNPay
+  amount          Decimal       @db.Decimal(12, 2)
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  note            String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  order PromotionOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([transactionCode])
+}
+
+model ListingPromotion {
+  id        String          @id @default(uuid()) @db.Uuid
+  listingId String          @db.Uuid
+  orderId   String?         @unique @db.Uuid
+  tier      PromotionTier
+  priority  Int             @default(1)
+  startDate DateTime        @default(now())
+  endDate   DateTime
+  status    PromotionStatus @default(ACTIVE)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  listing Listing         @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  order   PromotionOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, status])
+  @@index([status, endDate])
+  @@index([priority, status])
+}
+
+// Module 5: Notifications & In-App Alerts
+enum NotificationType {
+  ADMIN_WARNING_24H
+  ADMIN_HIDE_LISTING
+  ADMIN_AUTO_HIDE
+  REPORT_RESOLVED
+  REPORT_DISMISSED
+  INQUIRY_RECEIVED
+  INQUIRY_CONFIRMED
+  INQUIRY_REJECTED
+  SYSTEM_ANNOUNCEMENT
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  link      String?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+// Blog Posts & Rental Knowledge Center
+model BlogPost {
+  id          String    @id @default(uuid()) @db.Uuid
+  authorId    String    @db.Uuid
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String    @unique
+  summary     String    @db.Text
+  content     String    @db.Text
+  coverImage  String?
+  category    String    @default("Kinh nghiệm thuê phòng")
+  tags        String[]  @default([])
+  isPublished Boolean   @default(true)
+  views       Int       @default(0)
+  publishedAt DateTime? @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isPublished, publishedAt])
+  @@index([category, isPublished])
+}
