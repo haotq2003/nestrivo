@@ -285,7 +285,7 @@ export default function Navbar() {
                         </>
                       )}
 
-                      {(isLandlord || isAdmin) && (
+                      {isLandlord && (
                         <Link
                           href="/landlord/dashboard"
                           onClick={() => setUserDropdownOpen(false)}
@@ -352,19 +352,6 @@ export default function Navbar() {
                   className="px-4 py-2 text-xs font-bold text-[#292524] bg-[#F4CD65] hover:bg-[#ebbf4d] active:bg-[#dda934] rounded-xl shadow-xs transition-all"
                 >
                   Đăng ký
-                </Link>
-
-                <Link
-                  href="/landlord/dashboard"
-                  className={cn(
-                    "px-3 py-2 text-xs font-medium rounded-xl transition-colors flex items-center gap-1.5 ml-1 border",
-                    isOverlay
-                      ? "text-white border-white/30 hover:bg-white/15"
-                      : "text-[#57534E] border-[#EDE5D5] hover:text-[#292524] hover:bg-[#FFF7E5]"
-                  )}
-                >
-                  <Building className="w-3.5 h-3.5" />
-                  <span>Dành cho chủ nhà</span>
                 </Link>
               </div>
             )}
@@ -486,7 +473,7 @@ export default function Navbar() {
                 </Link>
               </>
             )}
-            {(isLandlord || isAdmin) && (
+            {isLandlord && (
               <Link
                 href="/landlord/dashboard"
                 onClick={() => setMobileMenuOpen(false)}

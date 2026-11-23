@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Info } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useLandlordLayout } from "@/components/landlord/layout/LandlordWorkspaceLayout";
 import {
   WizardHeader,
@@ -82,18 +82,6 @@ export default function NewListingWizardPage() {
           onReset={handleResetWizard}
           onDismiss={() => setHasDraftNotice(false)}
         />
-
-        <div className="p-3.5 rounded-2xl bg-white border border-[#EDE5D5] text-xs shadow-xs flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2 text-[#77715F] font-medium">
-            <Info className="w-4 h-4 text-[#DCA936] shrink-0" />
-            <span>
-              Quy trình đăng tin 6 bước chuẩn PropTech · Dữ liệu được lưu trữ trên trình duyệt của bạn (Local Demo).
-            </span>
-          </div>
-          <span className="text-[11px] font-bold text-[#805B10] bg-[#FFF1CC] px-2 py-0.5 rounded-md border border-[#F4CD65]/40">
-            Chế độ Thử nghiệm Giao diện
-          </span>
-        </div>
 
         {/* Form steps */}
         <div className="bg-white rounded-3xl border border-[#EDE5D5] p-5 sm:p-8 shadow-xs">

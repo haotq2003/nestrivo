@@ -265,30 +265,16 @@ export function AdminSidebar({
               </nav>
             </div>
 
-            {/* Quick Switch to Other Workspaces */}
+            {/* Quick Link to Public Marketplace */}
             <div className="pt-2 border-t border-[#EDE5D5]">
-              <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-[#77715F] mb-2">
-                Lối tắt không gian làm việc
-              </p>
               <nav className="space-y-1">
-                <Link
-                  href="/landlord/dashboard"
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium text-[#77715F] hover:text-[#373523] hover:bg-[#FFF7E5] transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <Building2 className="w-4 h-4 text-[#77715F] group-hover:text-[#DCA936]" />
-                    <span className="truncate">Kênh Chủ Nhà</span>
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-[#A8A190] group-hover:text-[#DCA936]" />
-                </Link>
-
                 <Link
                   href="/"
                   className="w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-sm font-medium text-[#77715F] hover:text-[#373523] hover:bg-[#FFF7E5] transition-all group"
                 >
                   <div className="flex items-center gap-3">
                     <Home className="w-4 h-4 text-[#77715F] group-hover:text-[#373523]" />
-                    <span className="truncate">Sàn Công Khai</span>
+                    <span className="truncate">Về Trang Chủ</span>
                   </div>
                   <ExternalLink className="w-3.5 h-3.5 text-[#A8A190] group-hover:text-[#373523]" />
                 </Link>

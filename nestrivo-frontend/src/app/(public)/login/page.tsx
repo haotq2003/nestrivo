@@ -11,13 +11,8 @@ import {
   ArrowRight, 
   AlertCircle, 
   CheckCircle2, 
-  Sparkles,
-  ShieldCheck,
-  Building2,
-  UserCheck
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { DEMO_ACCOUNTS } from "@/lib/demo-accounts";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -71,67 +66,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemoLogin = async (demo: typeof DEMO_ACCOUNTS[0]) => {
-    setEmail(demo.email);
-    setPassword(demo.password);
-    setErrorMessage(null);
-    setIsLoading(true);
-
-    try {
-      const res = await login({ email: demo.email, password: demo.password });
-      setSuccessMessage(`Đăng nhập thành công với vai trò ${demo.roleLabel}!`);
-      setTimeout(() => {
-        redirectAfterLogin(res.user.roles);
-      }, 600);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setErrorMessage(err.message);
-      } else {
-        setErrorMessage("Không thể đăng nhập tài khoản mẫu.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="py-8 sm:py-14 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[calc(100vh-160px)]">
       <div className="w-full max-w-md space-y-6">
-        {/* Demo Accounts Quick-Select */}
-        <div className="p-4 rounded-3xl bg-[#FFF7E5] border border-[#EDE5D5] shadow-xs space-y-2.5">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-[#373523]">
-            <Sparkles className="w-4 h-4 text-[#DCA936]" />
-            <span>Trải nghiệm nhanh (1-Click Login):</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {DEMO_ACCOUNTS.map((demo, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleQuickDemoLogin(demo)}
-                disabled={isLoading}
-                className="p-2.5 rounded-2xl bg-white border border-[#EDE5D5] hover:border-[#DCA936] hover:bg-[#FFFAEF] hover:shadow-xs transition-all text-left flex flex-col justify-between group disabled:opacity-50"
-              >
-                <div className="flex items-center gap-1">
-                  {demo.user.roles.includes("ADMIN") ? (
-                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                  ) : demo.user.roles.includes("LANDLORD") ? (
-                    <Building2 className="w-3.5 h-3.5 text-[#DCA936]" />
-                  ) : (
-                    <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-                  )}
-                  <span className="text-[11px] font-bold text-[#373523] truncate">
-                    {demo.roleLabel.split(" ")[0]}
-                  </span>
-                </div>
-                <span className="text-[10px] text-[#77715F] font-medium truncate mt-1 group-hover:text-[#DCA936]">
-                  {demo.email.split("@")[0]}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Login Form Card */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#EDE5D5] shadow-xl shadow-[#373523]/5 space-y-5">
           {/* Alert feedback */}

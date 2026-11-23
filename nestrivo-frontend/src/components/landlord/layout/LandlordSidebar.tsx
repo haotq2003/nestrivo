@@ -246,30 +246,15 @@ export function LandlordSidebar({
             </Link>
 
             <div className="pt-3 mt-3 border-t border-[#EDE5D5]">
-              <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-[#77715F]">
-                Lối tắt hệ thống
-              </div>
-
               <Link
                 href="/"
                 className="flex items-center justify-between px-3 py-2.5 rounded-2xl text-[13px] sm:text-sm font-medium text-[#77715F] hover:text-[#373523] hover:bg-[#FFF7E5] transition-colors group gap-2"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Home className="w-4 h-4 text-[#A8A190] group-hover:text-[#DCA936] shrink-0" />
-                  <span className="whitespace-nowrap">Trang tìm kiếm người thuê</span>
+                  <span className="whitespace-nowrap">Về Trang Chủ</span>
                 </div>
                 <ExternalLink className="w-3.5 h-3.5 text-[#A8A190] group-hover:text-[#DCA936] shrink-0 ml-auto" />
-              </Link>
-
-              <Link
-                href="/admin/moderation"
-                className="flex items-center justify-between px-3 py-2 rounded-2xl text-[13px] sm:text-sm font-medium text-[#77715F] hover:text-[#373523] hover:bg-[#FFF7E5] transition-colors group gap-2"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <ShieldCheck className="w-4 h-4 text-[#A8A190] group-hover:text-[#373523] shrink-0" />
-                  <span className="whitespace-nowrap">Kênh Quản trị (Admin)</span>
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 text-[#A8A190] group-hover:text-[#373523] shrink-0 ml-auto" />
               </Link>
             </div>
           </nav>
